@@ -1,0 +1,25 @@
+{% include 'header.html' %}
+<div class="contact-section" style="height: 100%;">
+    <div class="container">
+        <div class="row" style="margin-top: 10%;">
+            <h1>Hi {{ name }}, thanks for logging in with MyMLH!</h1>
+            <h2>Just one more thing, please upload your resume... </h2>
+            <form method="post" action="/register" enctype="multipart/form-data">
+                <input id="resume" name="resume" type="file"/>
+                <br>
+                <p>By registering & attending, you agree to the following policies:</p>
+                <p><a href="https://github.com/MLH/mlh-policies/blob/master/data-sharing.md">MLH's Data Sharing
+                    Notice</a>
+                </p>
+                <p><a href="https://mlh.io/privacy">MLH's Privacy Policy</a></p>
+                <p>
+                    <a href="https://github.com/MLH/mlh-policies/blob/master/prize-terms-and-conditions/contest-terms.md">MLH's
+                        Contest Terms and Conditions</a></p>
+                <p><a href="https://static.mlh.io/docs/mlh-code-of-conduct.pdf">MLH's Code of Conduct</a></p>
+                <br>
+                <input name="submit" class="btn btn-lg btn-primary btn-invert" type="submit" value="Submit"/>
+            </form>
+        </div>
+    </div>
+</div>
+{% include 'footer.html' %}
