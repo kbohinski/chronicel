@@ -3,7 +3,7 @@ Our super sweet hacker management system for HackTCNJ 2017!
 
 chronicel is a simple and minimal registration system made for HackTCNJ. It provides both hackers and organizers everything they need all in one place. HackTCNJ is a smaller, more personal hackathon, so we have no need for hacker applications, team registration, or reimbursement.
 
-![HackTCNJ 2017 Logo](static/img/favicon.png)
+![HackTCNJ 2017 Logo](static/favicon.png)
 
 ## Hacker's view:
 ![Hacker page](hacker.png)
