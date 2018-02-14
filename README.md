@@ -19,6 +19,7 @@ We wanted to provide our hackers the best registration experience we could.
 ## Used By:
 * HackTCNJ 2017 & 2018
 * Hack@WPI 2018
+
 Let us know if you are using chronicel! Add yourself to this list with a PR!
 
 ## Design Requirements:
