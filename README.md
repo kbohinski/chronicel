@@ -16,6 +16,11 @@ We wanted to provide our hackers the best registration experience we could.
 
 **It also has a really nice system for organizers to work with MyMLH, this is what we would really love for others to build upon!**
 
+## Used By:
+* HackTCNJ 2017 & 2018
+* Hack@WPI 2018
+Let us know if you are using chronicel! Add yourself to this list with a PR!
+
 ## Design Requirements:
 - Realtime Registration Updates
 - Automatic Waitlist Management
