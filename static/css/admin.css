@@ -1,0 +1,24 @@
+.table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.table-hover > tbody > tr:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+table.sortable th:not(.sorttable_sorted):not(.sorttable_sorted_reverse):not(.sorttable_nosort):after {
+    content: " \25B4\25BE"
+}
+
+.swal-success > .swal-footer > .swal-button-container > .swal-button--confirm {
+  background-color: #18BC9C;
+}
+
+.swal-error > .swal-footer > .swal-button-container > .swal-button--confirm {
+  background-color: #E74C3C;
+}
+
+canvas {
+    max-width: 500px;
+    max-height: 500px;
+}

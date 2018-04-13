@@ -78,26 +78,39 @@ const promoteFromWaitlist = (id) => {
   swal({
     title: 'Promote hacker ' + id + ' off the waitlist?',
     text: 'Are you sure you wish to promote this hacker off the waitlist?',
-    type: 'info',
-    showCancelButton: true,
-    closeOnConfirm: false,
-    confirmButtonText: 'Yes, promote!',
-    confirmButtonColor: successColor
+    icon: 'info',
+    buttons: {
+      cancel: {
+      	text: 'Cancel',
+        value: null,
+        visible: true,
+        className: '',
+        closeModal: true
+      },
+      confirm: {
+        text: 'Yes, promote!',
+        value: true,
+        visible: true,
+        className: '',
+        closeModal: false
+      }
+    },
+    className: 'swal-success'
   }, () => {
     $.get('/promote_from_waitlist?mlh_id=' + id, (data) => {
       let title = ''
       let msg = ''
-      let type = ''
+      let icon = ''
       if (data.status === 'success') {
         title = 'Promoted!'
         msg = 'The hacker was successfully promoted off the waitlist!'
-        type = 'success'
+        icon = 'success'
       } else {
         title = 'Error!'
         msg = JSON.stringify(data)
-        type = 'error'
+        icon = 'error'
       }
-      swal(title, msg, type)
+      swal(title, msg, icon)
     })
   })
 }
@@ -106,26 +119,39 @@ const changeAdmin = (id, action) => {
   swal({
     title: 'Modify:' + action + ' admin prviliges on hacker ' + id + ' ?',
     text: 'Are you sure you wish to modify:' + action + ' this hacker\'s administrative privileges?',
-    type: 'warning',
-    showCancelButton: true,
-    closeOnConfirm: false,
-    confirmButtonText: 'Yes, ' + action + '!',
-    confirmButtonColor: errColor
+    icon: 'warning',
+    buttons: {
+      cancel: {
+      	text: 'Cancel',
+        value: null,
+        visible: true,
+        className: '',
+        closeModal: true
+      },
+      confirm: {
+        text: 'Yes, ' + action + '!',
+        value: true,
+        visible: true,
+        className: '',
+        closeModal: false
+      }
+    },
+    className: 'swal-error'
   }, () => {
     $.get('/change_admin?mlh_id=' + id + '&action=' + action, (data) => {
       let title = ''
       let msg = ''
-      let type = ''
+      let icon = ''
       if (data.status === 'success') {
         title = 'Modified!'
         msg = 'The hacker\'s administrative privileges have been modified:' + action + '!'
-        type = 'success'
+        icon = 'success'
       } else {
         title = 'Error!'
         msg = JSON.stringify(data)
-        type = 'error'
+        icon = 'error'
       }
-      swal({title: title, msg: msg, type: type}, () => window.location.reload(true))
+      swal({title: title, msg: msg, icon: icon}, () => window.location.reload(true))
     })
   })
 }
@@ -134,26 +160,39 @@ const drop = (id) => {
   swal({
     title: 'Drop hacker ' + id + ' ?',
     text: 'Are you sure you wish to drop this hacker\'s application?',
-    type: 'warning',
-    showCancelButton: true,
-    closeOnConfirm: false,
-    confirmButtonText: 'Yes, drop!',
-    confirmButtonColor: errColor
+    icon: 'warning',
+    buttons: {
+      cancel: {
+      	text: 'Cancel',
+        value: null,
+        visible: true,
+        className: '',
+        closeModal: true
+      },
+      confirm: {
+        text: 'Yes, drop!',
+        value: true,
+        visible: true,
+        className: '',
+        closeModal: false
+      }
+    },
+    className: 'swal-error'
   }, () => {
     $.get('/drop?mlh_id=' + id, (data) => {
       let title = ''
       let msg = ''
-      let type = ''
+      let icon = ''
       if (data.status === 'success') {
         title = 'Dropped!'
         msg = 'The hacker\'s application was successfully dropped!'
-        type = 'success'
+        icon = 'success'
       } else {
         title = 'Error!'
         msg = JSON.stringify(data)
-        type = 'error'
+        icon = 'error'
       }
-      swal(title, msg, type)
+      swal(title, msg, icon)
     })
   })
 }
@@ -162,31 +201,44 @@ const checkIn = (id) => {
   swal({
     title: 'Check in hacker ' + id + ' ?',
     text: 'Are you sure you wish to check in this hacker?',
-    type: 'info',
-    showCancelButton: true,
-    closeOnConfirm: false,
-    confirmButtonText: 'Yes, check in!',
-    confirmButtonColor: successColor
+    icon: 'info',
+    buttons: {
+      cancel: {
+      	text: 'Cancel',
+        value: null,
+        visible: true,
+        className: '',
+        closeModal: true
+      },
+      confirm: {
+        text: 'Yes, check in!',
+        value: true,
+        visible: true,
+        className: '',
+        closeModal: false
+      }
+    },
+    className: 'swal-success'
   }, () => {
     $.get('/check_in?mlh_id=' + id, (data) => {
       let title = ''
       let msg = ''
-      let type = ''
+      let icon = ''
       if (data.status === 'success') {
         title = 'Checked in!'
         msg = 'The hacker was checked in!'
-        type = 'success'
+        icon = 'success'
       } else {
         title = 'Error!'
         msg = JSON.stringify(data)
-        type = 'error'
+        icon = 'error'
       }
 
       if (data.status === 'success' && data.action === 'check_in' && data.minor === true) {
         msg += '\nATTENTION:\nHacker is a minor, please ensure they have the minor consent form!'
       }
 
-      swal(title, msg, type)
+      swal(title, msg, icon)
     })
   })
 }

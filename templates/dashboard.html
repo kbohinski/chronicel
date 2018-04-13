@@ -1,6 +1,7 @@
 {% include 'header.html' %}
-<script src="https://cdn.rawgit.com/t4t5/sweetalert/master/dist/sweetalert.min.js"></script>
-<link rel="stylesheet" href="https://cdn.rawgit.com/t4t5/sweetalert/master/dist/sweetalert.css">
+<script src="https://unpkg.com/sweetalert@2.1.0/dist/sweetalert.min.js"
+        integrity="sha384-UQsTmaPFDZmoSs+C5muZerOkn3H9/UibH1bDNhuzxtDQNJ7bEKJtW7swm78LgNCh"
+        crossorigin="anonymous"></script>
 
 <div class="contact-section" style="height: 100%;">
     <div class="container">
@@ -42,30 +43,43 @@
         swal({
             title: 'Drop your application?',
             text: 'Are you sure you wish to drop your application? This cannot be undone.',
-            type: 'warning',
-            showCancelButton: true,
-            closeOnConfirm: false,
-            confirmButtonText: 'Yes, drop!',
-            confirmButtonColor: errColor
+            icon: 'warning',
+            buttons: {
+              cancel: {
+                text: 'Cancel',
+                value: null,
+                visible: true,
+                className: '',
+                closeModal: true
+              },
+              confirm: {
+                text: 'Yes, drop!',
+                value: true,
+                visible: true,
+                className: '',
+                closeModal: false
+              }
+            },
+            className: 'swal-error'
         }, () = > {
             $.get('/drop?mlh_id=' + id, (data) = > {
             let title = ''
             let msg = ''
-            let type = ''
+            let icon = ''
             if (data.status === 'success'
     )
         {
             title = 'Dropped!'
             msg = 'Your application was successfully dropped!'
-            type = 'success'
+            icon = 'success'
         }
     else
         {
             title = 'Error!'
             msg = JSON.stringify(data)
-            type = 'error'
+            icon = 'error'
         }
-        swal(title, msg, type)
+        swal(title, msg, icon)
         if (data.status === 'success') {
             setTimeout(() = > {window.location = '/'
         },
