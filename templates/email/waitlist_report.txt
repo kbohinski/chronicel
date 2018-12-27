@@ -1,0 +1,16 @@
+Hi, here is your daily report:
+Before Waitlist Promotion:
+  Reg Cap:        {{ WAITLIST_LIMIT }}
+  Num Attendees:  {{ num_attendees }}
+  Num Waitlisted: {{ num_waitlisted }}
+  Num to Promote: {{ num_to_promote_copy }}
+After Promotion:
+  Num Promoted (Attempted): {{ num_promoted }}
+  Error Count:              {{ errs|length }}
+  Num To Promote:           {{ num_to_promote }}
+Abandonment:
+  Num Abandoned:                             {{ num_abandoned }}
+  Num Converted:                             {{ num_converted }}
+  Application Abandonment Emails Sent Today: {{ num_abandoned_sent }}
+Promotion Error Messages:
+  {{ errs }}

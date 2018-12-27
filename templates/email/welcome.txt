@@ -1,0 +1,18 @@
+{% include 'header.txt' %}
+
+Thanks for applying to {{ hackathon_name }}!
+
+{% if waitlist %}
+Sorry! We have hit our registration capacity. You have been placed on the waitlist.
+We will let you know if space opens up.
+{% else %}
+You are fully registered! We will send you more info closer to the hackathon.
+{% endif %}
+
+{% if minor %}
+The birthday you provided indicates you are a minor.
+Please note that you will need to have your guardians sign the minor consent form!
+https://www.hacktcnj.com/static/assets/MinorParticipationWaiverHACKTCNJ2018.doc.pdf
+{% endif %}
+
+{% include 'footer.txt' %}

@@ -1,11 +1,11 @@
-{% include 'header.html' %}
+{% include 'web/header.html' %}
 
-<script src="http://www.kryogenix.org/code/browser/sorttable/sorttable.js"></script>
+<script src="https://www.kryogenix.org/code/browser/sorttable/sorttable.js"></script>
 <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.4.3.js"></script>
-<script src="https://cdn.rawgit.com/t4t5/sweetalert/master/dist/sweetalert.min.js"></script>
-<link rel="stylesheet" href="https://cdn.rawgit.com/t4t5/sweetalert/master/dist/sweetalert.css">
-<script src="//cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js"></script>
-<script src="../static/js/admin.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js"></script>
+<script src="../../static/js/admin.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
 
 <style>
@@ -41,10 +41,10 @@
                     let genderChart = new Chart(genderCtx, {
                         type: 'doughnut',
                         data: {
-                            labels: ['Female', 'Male'],
+                            labels: ['Female', 'Male', 'Non-binary', 'I prefer not to say', 'Other'],
                             datasets: [
                                 {
-                                    data: [{{ female_count }}, {{ male_count }}]
+                                    data: [{{ female_count }}, {{ male_count }}, {{ non_binary_count }}, {{ prefer_not_to_say_count }}, {{ other_count }}]
                                 }
                             ]
                         },
@@ -145,7 +145,9 @@
                     <th>Total</th>
                     <th>Attendees</th>
                     <th>Waitlist</th>
+                    <th>Abandoned Users</th>
                     <th>Checked In</th>
+                    <th>Admins</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -153,7 +155,9 @@
                     <td>{{ total_count }}</td>
                     <td>{{ (total_count - waitlist_count) }}</td>
                     <td>{{ waitlist_count }}</td>
+                    <td>{{ abandoned_users_count }}</td>
                     <td>{{ check_in_count }}</td>
+                    <td>{{ admin_count }}</td>
                 </tr>
                 </tbody>
             </table>
@@ -162,20 +166,24 @@
             <table id="shirts" class="table table-striped table-hover table-condensed sortable">
                 <thead>
                 <tr>
+                    <th>XXS</th>
                     <th>XS</th>
                     <th>S</th>
                     <th>M</th>
                     <th>L</th>
                     <th>XL</th>
+                    <th>XXL</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr>
+                    <td>{{ shirt_count['xxs'] }}</td>
                     <td>{{ shirt_count['xs'] }}</td>
                     <td>{{ shirt_count['s'] }}</td>
                     <td>{{ shirt_count['m'] }}</td>
                     <td>{{ shirt_count['l'] }}</td>
                     <td>{{ shirt_count['xl'] }}</td>
+                    <td>{{ shirt_count['xxl'] }}</td>
                 </tr>
                 </tbody>
             </table>
@@ -253,7 +261,16 @@
 
 <script>
     $(document).ready(() => {
-        setTimeout('let myTh = document.getElementsByTagName("th")[14]; sorttable.innerSortFunction.apply(myTh, []); sorttable.innerSortFunction.apply(myTh, []);', 50)
+        setTimeout('let myTh = document.getElementsByTagName("th")[18]; sorttable.innerSortFunction.apply(myTh, []); sorttable.innerSortFunction.apply(myTh, []);', 100)
+        swal({
+            title: 'PII & SPI Notice!',
+            text: 'This page contains personally identifiable information (PII), and sensitive personal information (SPI). Please be cautious, and treat this data with extreme care.',
+            type: 'warning',
+            showCancelButton: false,
+            closeOnConfirm: false,
+            confirmButtonText: 'I understand.',
+            confirmButtonColor: errColor
+        })
     })
 </script>
-{% include 'footer.html' %}
+{% include 'web/footer.html' %}

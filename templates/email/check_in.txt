@@ -1,0 +1,6 @@
+{% include 'header.txt' %}
+
+Thanks for checking in!
+We will start shortly, please check your dashboard for updates!
+
+{% include 'footer.txt' %}

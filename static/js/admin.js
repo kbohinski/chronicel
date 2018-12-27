@@ -1,7 +1,5 @@
 'use strict'
 
-document.getElementById('mlh-trust-badge').outerHTML = ''
-
 let pn = new PubNub({
   publishKey: '',
   subscribeKey: '',
@@ -9,7 +7,7 @@ let pn = new PubNub({
 })
 
 pn.subscribe({
-  channels: ['hacktcnj17-admin']
+  channels: ['hacktcnj18-admin']
 })
 
 pn.addListener({
@@ -104,12 +102,12 @@ const promoteFromWaitlist = (id) => {
 
 const changeAdmin = (id, action) => {
   swal({
-    title: 'Modify:' + action + ' admin prviliges on hacker ' + id + ' ?',
-    text: 'Are you sure you wish to modify:' + action + ' this hacker\'s administrative privileges?',
+    title: 'Modify:' + action + ' admin privileges on hacker ' + id + ' ?',
+    text: 'Are you sure you wish to modify:' + action + ' this hacker\'s administrative privileges? This will give them access to personally identifiable information (PII), and sensitive personal information (SPI). Please be cautious, and respect the privacy of our attendees when granting access to this page.',
     type: 'warning',
     showCancelButton: true,
     closeOnConfirm: false,
-    confirmButtonText: 'Yes, ' + action + '!',
+    confirmButtonText: 'Yes, I understand, ' + action + '!',
     confirmButtonColor: errColor
   }, () => {
     $.get('/change_admin?mlh_id=' + id + '&action=' + action, (data) => {

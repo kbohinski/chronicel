@@ -1,36 +1,39 @@
 import hashlib
+import jinja2
 import json
 import os
 import random
+import requests
 import string
 import time
 from datetime import datetime
-
-import requests
 from dateutil.relativedelta import relativedelta
 from flask import Flask, render_template, redirect, url_for, request, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_sslify import SSLify
 from mailchimp3 import MailChimp
 from pubnub.pnconfiguration import PNConfiguration
 from pubnub.pubnub import PubNub
 from werkzeug.utils import secure_filename
 
-from config_hacktcnj import api_keys, mc_list_ids, WAITLIST_LIMIT, HACKATHON_TIME, ALLOWED_EXTENSIONS
+from config_hackathon import API_KEYS, MC_LIST_IDS, TWITTER_LINK, WAITLIST_WHITELISTED_EMAIL_DOMAINS, HACKATHON_TIME, \
+    ALLOWED_EXTENSIONS, HACKATHON_NAME, WAITLIST_LIMIT, EMAIL_SUBJECT_PREFIX, EMAILS_TO_SUBJECTS
 
 app = Flask(__name__)
+sslify = SSLify(app)
 app.config.from_pyfile('config.py')
 
 db = SQLAlchemy(app)
 
 pnconfig = PNConfiguration()
 
-pnconfig.publish_key = api_keys['pubnub']['pub']
-pnconfig.subscribe_key = api_keys['pubnub']['sub']
+pnconfig.publish_key = API_KEYS['pubnub']['pub']
+pnconfig.subscribe_key = API_KEYS['pubnub']['sub']
 pnconfig.ssl = True
 
 pn = PubNub(pnconfig)
 
-mc = MailChimp(api_keys['mailchimp']['user'], api_keys['mailchimp']['key'])
+mc = MailChimp(API_KEYS['mailchimp']['user'], API_KEYS['mailchimp']['key'])
 
 
 class Hacker(db.Model):
@@ -51,6 +54,15 @@ class AutoPromoteKeys(db.Model):
     key = db.Column(db.String(4096))
     val = db.Column(db.String(4096))
 
+
+class AbandonedHacker(db.Model):
+    __tablename__ = 'abandoned_hackers'
+
+    mlh_id = db.Column(db.Integer, primary_key=True)
+    time_email_sent = db.Column(db.Integer)
+    registered = db.Column(db.Boolean)
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'GET':
@@ -62,24 +74,17 @@ def register():
 
         if request.args.get('code') is None:
             # Get info from MyMLH
-            return redirect(
-                'https://my.mlh.io/oauth/authorize?client_id=' + api_keys['mlh']['client_id'] + '&redirect_uri=' +
-                api_keys['mlh'][
-                    'callback'] + '&response_type=code&scope=email+phone_number+demographics+birthday+education+event')
+            return redirect(API_KEYS['mlh']['urls']['auth'])
 
         if is_logged_in():
-            return render_template('register.html', name=session['mymlh']['first_name'])
+            return render_template('web/register.html', name=session['mymlh']['first_name'])
 
         code = request.args.get('code')
-        oauth_redirect = requests.post(
-            'https://my.mlh.io/oauth/token?client_id=' + api_keys['mlh']['client_id'] + '&client_secret=' +
-            api_keys['mlh'][
-                'secret'] + '&code=' + code + '&redirect_uri=' + api_keys['mlh'][
-                'callback'] + '&grant_type=authorization_code')
+        oauth_redirect = requests.post(API_KEYS['mlh']['urls']['token'] + '&code=' + code)
 
         if oauth_redirect.status_code == 200:
             access_token = json.loads(oauth_redirect.text)['access_token']
-            user_info_request = requests.get('https://my.mlh.io/api/v2/user.json?access_token=' + access_token)
+            user_info_request = requests.get(API_KEYS['mlh']['urls']['user'] + '?access_token=' + access_token)
             if user_info_request.status_code == 200:
                 user = json.loads(user_info_request.text)['data']
                 session['mymlh'] = user
@@ -87,7 +92,7 @@ def register():
                     # User already exists in db, log them in
                     return redirect(url_for('dashboard'))
 
-                return render_template('register.html', name=user['first_name'])
+                return render_template('web/register.html', name=user['first_name'])
 
         return redirect(url_for('register'))
 
@@ -109,7 +114,7 @@ def register():
         if resume and not allowed_file(resume.filename):
             return jsonify(
                 {'status': 'error', 'action': 'register',
-                 'more_info': 'Invalid file type... Accepted types are txt pdf doc docx and rtf...'})
+                 'more_info': 'Invalid file type... Accepted types are txt pdf doc docx and rtf... Press back and try again...'})
 
         if resume and allowed_file(resume.filename):
             # Good file!
@@ -127,13 +132,13 @@ def register():
             # Determine if hacker should be placed on waitlist
             waitlist = False
             if db.session.query(Hacker).count() + 1 > WAITLIST_LIMIT and session['mymlh']['email'].split('@')[
-                -1] != 'tcnj.edu':
+                -1] not in WAITLIST_WHITELISTED_EMAIL_DOMAINS:
                 waitlist = True
 
             # Add the user to mailchimp
             email_hash = hashlib.md5(session['mymlh']['email'].lower().encode('utf-8')).hexdigest()
             if waitlist:
-                mc.lists.members.create_or_update(mc_list_ids['waitlist'], email_hash, {
+                mc.lists.members.create_or_update(MC_LIST_IDS['waitlist'], email_hash, {
                     'email_address': session['mymlh']['email'],
                     'status': 'subscribed',
                     'status_if_new': 'subscribed',
@@ -143,7 +148,7 @@ def register():
                     }
                 })
             else:
-                mc.lists.members.create_or_update(mc_list_ids['attending'], email_hash, {
+                mc.lists.members.create_or_update(MC_LIST_IDS['attending'], email_hash, {
                     'email_address': session['mymlh']['email'],
                     'status': 'subscribed',
                     'status_if_new': 'subscribed',
@@ -159,20 +164,17 @@ def register():
                        checked_in=False, minor=minor, waitlisted=waitlist, admin=False))
             db.session.commit()
 
-            # Send a welcome email
-            msg = 'Hey ' + session['mymlh']['first_name'] + '\n\n'
-            msg += 'Thanks for applying to HackTCNJ!\n'
-            if waitlist:
-                msg += 'Sorry! We have hit our registration capacity. You have been placed on the waitlist.\n'
-                msg += 'We will let you know if space opens up.\n'
-            else:
-                msg += 'You are fully registered! We will send you more info closer to the hackathon.\n'
-            if minor:
-                msg += 'The birthday you provided indicates you are a minor.\n'
-                msg += 'Please note that you will need to have your guardians sign the minor consent form!\n'
-            send_email(session['mymlh']['email'], 'HackTCNJ - Thanks for applying', msg)
+            abandoned = db.session.query(AbandonedHacker).filter(
+                AbandonedHacker.mlh_id == session['mymlh']['id']).one_or_none()
+            if abandoned is not None:
+                abandoned.registered = True
+                db.session.commit()
 
-            pn.publish().channel('hacktcnj17-admin').message({'action': 'new_user'}).sync()
+            # Send a welcome email
+            send_email(session['mymlh']['email'], 'welcome',
+                       {'first_name': session['mymlh']['first_name'], 'waitlist': waitlist, 'minor': minor})
+
+            pn.publish().channel(API_KEYS['pubnub']['channel']).message({'action': 'new_user'}).sync()
 
             # Finally, send them to their dashboard
             return redirect(url_for('dashboard'))
@@ -188,9 +190,13 @@ def admin():
     waitlist_count = 0
     total_count = 0
     check_in_count = 0
-    shirt_count = {'xs': 0, 's': 0, 'm': 0, 'l': 0, 'xl': 0, }
+    admin_count = 0
+    shirt_count = {'xxs': 0, 'xs': 0, 's': 0, 'm': 0, 'l': 0, 'xl': 0, 'xxl': 0}
     male_count = 0
     female_count = 0
+    non_binary_count = 0
+    prefer_not_to_say_count = 0
+    other_count = 0
     schools = {}
     majors = {}
 
@@ -212,10 +218,19 @@ def admin():
         if obj.checked_in:
             check_in_count += 1
 
+        if obj.admin:
+            admin_count += 1
+
         if hacker['gender'] == 'Male':
             male_count += 1
-        else:
+        elif hacker['gender'] == 'Female':
             female_count += 1
+        elif hacker['gender'] == 'Non-binary':
+            non_binary_count += 1
+        elif hacker['gender'] == 'I prefer not to say':
+            prefer_not_to_say_count += 1
+        else:
+            other_count += 1
 
         total_count += 1
 
@@ -247,12 +262,14 @@ def admin():
             'school': hacker['school']
         })
 
-    return render_template('admin.html', hackers=hackers, total_count=total_count, waitlist_count=waitlist_count,
-                           check_in_count=check_in_count, shirt_count=shirt_count, female_count=female_count,
-                           male_count=male_count, schools=schools, majors=majors,
-                           mlh_url='https://my.mlh.io/api/v2/users.json?client_id=' + api_keys['mlh'][
-                               'client_id'] + '&secret=' + api_keys['mlh'][
-                                       'secret'])
+    abandoned_users_count = len(mlh_info) - total_count
+
+    return render_template('web/admin.html', hackers=hackers, total_count=total_count, waitlist_count=waitlist_count,
+                           check_in_count=check_in_count, admin_count=admin_count, shirt_count=shirt_count,
+                           female_count=female_count, male_count=male_count, non_binary_count=non_binary_count,
+                           prefer_not_to_say_count=prefer_not_to_say_count, other_count=other_count, schools=schools,
+                           majors=majors, abandoned_users_count=abandoned_users_count,
+                           mlh_url=API_KEYS['mlh']['urls']['users'])
 
 
 @app.route('/change_admin', methods=['GET'])
@@ -275,7 +292,7 @@ def change_admin():
         db.session.query(Hacker).filter(Hacker.mlh_id == request.args.get('mlh_id')).update({'admin': False})
     db.session.commit()
 
-    pn.publish().channel('hacktcnj17-admin').message(
+    pn.publish().channel(API_KEYS['pubnub']['channel']).message(
         {'status': 'success', 'action': 'change_admin:' + request.args.get('action'), 'more_info': '',
          'id': request.args.get('mlh_id')}).sync()
 
@@ -307,17 +324,15 @@ def check_in():
     mlh_info = get_mlh_user(request.args.get('mlh_id'))
 
     # Send a welcome email...
-    msg = 'Hey ' + mlh_info['first_name'] + ',\n\n'
-    msg += 'Thanks for checking in!\n'
-    msg += 'We will start shortly, please check your dashboard for updates!\n'
-    send_email(mlh_info['email'], 'HackTCNJ - Thanks for checking in', msg)
+    send_email(mlh_info['email'], 'check_in', {'first_name': mlh_info['first_name']})
 
-    pn.publish().channel('hacktcnj17-admin').message(
+    pn.publish().channel(API_KEYS['pubnub']['channel']).message(
         {'status': 'success', 'action': 'check_in', 'more_info': '', 'minor': minor,
          'id': request.args.get('mlh_id')}).sync()
 
     return jsonify(
-        {'status': 'success', 'action': 'check_in', 'more_info': '', 'minor': minor, 'id': request.args.get('mlh_id')})
+        {'status': 'success', 'action': 'check_in', 'more_info': '', 'minor': minor,
+         'id': request.args.get('mlh_id')})
 
 
 @app.route('/drop', methods=['GET'])
@@ -361,16 +376,14 @@ def drop():
     # Delete user from mailchimp...
     email_hash = hashlib.md5(mlh_info['email'].lower().encode('utf-8')).hexdigest()
     if waitlisted:
-        mc.lists.members.delete(mc_list_ids['waitlist'], email_hash)
+        mc.lists.members.delete(MC_LIST_IDS['waitlist'], email_hash)
     else:
-        mc.lists.members.delete(mc_list_ids['attending'], email_hash)
+        mc.lists.members.delete(MC_LIST_IDS['attending'], email_hash)
 
     # Send a goodbye email...
-    msg = 'Dear ' + mlh_info['first_name'] + ',\n\n'
-    msg += 'Your application was dropped, sorry to see you go.\n'
-    send_email(mlh_info['email'], 'HackTCNJ - Application Dropped', msg)
+    send_email(mlh_info['email'], 'goodbye', {'first_name': mlh_info['first_name']})
 
-    pn.publish().channel('hacktcnj17-admin').message(
+    pn.publish().channel(API_KEYS['pubnub']['channel']).message(
         {'status': 'success', 'action': 'drop', 'more_info': '', 'id': request.args.get('mlh_id')}).sync()
 
     if is_self(request.args.get('mlh_id')):
@@ -383,7 +396,8 @@ def drop():
 def promote_from_waitlist():
     # Promote a hacker from the waitlist...
     if request.args.get('mlh_id') is None:
-        return jsonify({'status': 'error', 'action': 'promote_from_waitlist', 'more_info': 'Missing required field...'})
+        return jsonify(
+            {'status': 'error', 'action': 'promote_from_waitlist', 'more_info': 'Missing required field...'})
 
     (key, val) = get_auto_promote_keys()
 
@@ -416,15 +430,12 @@ def promote_from_waitlist():
     mlh_info = get_mlh_user(request.args.get('mlh_id'))
 
     # Send a welcome email...
-    msg = 'Dear ' + mlh_info['first_name'] + ',\n\n'
-    msg += 'You are off the waitlist!\n'
-    msg += 'Room has opened up, and you are now welcome to come, we look forward to seeing you!\n'
-    send_email(mlh_info['email'], "HackTCNJ - You're In!", msg)
+    send_email(mlh_info['email'], 'promoted_from_waitlist', {'first_name': mlh_info['first_name']})
 
     # Swap mailchimp lists...
     email_hash = hashlib.md5(mlh_info['email'].lower().encode('utf-8')).hexdigest()
-    mc.lists.members.delete(mc_list_ids['waitlist'], email_hash)
-    mc.lists.members.create_or_update(mc_list_ids['attending'], email_hash, {
+    mc.lists.members.delete(MC_LIST_IDS['waitlist'], email_hash)
+    mc.lists.members.create_or_update(MC_LIST_IDS['attending'], email_hash, {
         'email_address': mlh_info['email'],
         'status': 'subscribed',
         'status_if_new': 'subscribed',
@@ -434,7 +445,7 @@ def promote_from_waitlist():
         }
     })
 
-    pn.publish().channel('hacktcnj17-admin').message(
+    pn.publish().channel(API_KEYS['pubnub']['channel']).message(
         {'status': 'success', 'action': 'promote_from_waitlist', 'more_info': '',
          'id': request.args.get('mlh_id')}).sync()
 
@@ -448,7 +459,7 @@ def dashboard():
     if not is_logged_in():
         return redirect(url_for('register'))
 
-    return render_template('dashboard.html', name=session['mymlh']['first_name'], id=session['mymlh']['id'],
+    return render_template('web/dashboard.html', name=session['mymlh']['first_name'], id=session['mymlh']['id'],
                            admin=is_admin())
 
 
@@ -480,25 +491,27 @@ def is_self(mlh_id):
     return True
 
 
-def send_email(to, subject, msg):
-    msg += '\nPlease share with your friends and follow us on twitter for updates.\n'
-    msg += '\nThanks Again!\nThe HackTCNJ Team\nhttp://www.twitter.com/hacktcnj'
+def send_email(to, tmp, ctx):
+    ctx['hackathon_name'] = HACKATHON_NAME
+    ctx['twitter_link'] = TWITTER_LINK
+    msg = jinja2.Environment(loader=jinja2.FileSystemLoader(
+        str(os.path.join(os.path.dirname(os.path.abspath(__file__)))) + '/templates/email/')).get_template(
+        tmp + '.txt').render(ctx)
+    subject = EMAIL_SUBJECT_PREFIX + EMAILS_TO_SUBJECTS[tmp]
     return requests.post(
-        'https://api.mailgun.net/v3/hacktcnj.com/messages',
-        auth=('api', api_keys['mailgun']),
-        data={'from': 'HackTCNJ Team <noreply@hacktcnj.com>',
+        API_KEYS['mailgun']['url'],
+        auth=('api', API_KEYS['mailgun']['key']),
+        data={'from': API_KEYS['mailgun']['from'],
               'to': [to],
               'subject': subject,
               'text': msg,
-              'h:Reply-To': 'acm@tcnj.edu'})
+              'h:Reply-To': API_KEYS['mailgun']['reply_to']})
 
 
 def get_mlh_user(mlh_id):
     if not isinstance(mlh_id, int):
         mlh_id = int(mlh_id)
-    req = requests.get(
-        'https://my.mlh.io/api/v2/users.json?client_id=' + api_keys['mlh']['client_id'] + '&secret=' + api_keys['mlh'][
-            'secret'])
+    req = requests.get(API_KEYS['mlh']['urls']['users'])
     if req.status_code == 200:
         hackers = req.json()['data']
         for hacker in hackers:
@@ -507,14 +520,15 @@ def get_mlh_user(mlh_id):
 
 
 def get_mlh_users():
-    req = requests.get(
-        'https://my.mlh.io/api/v2/users.json?client_id=' + api_keys['mlh']['client_id'] + '&secret=' + api_keys['mlh'][
-            'secret'])
+    req = requests.get(API_KEYS['mlh']['urls']['users'])
     if req.status_code == 200:
         return req.json()['data']
 
 
 def gen_new_auto_promote_keys(n=50):
+    def new_key(n):
+        return ''.join(random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(n))
+
     key = new_key(n)
     val = new_key(n)
     db.session.add(AutoPromoteKeys(key=key, val=val))
@@ -530,10 +544,6 @@ def get_auto_promote_keys():
         return (row.key, row.val)
     else:
         return ('', '')
-
-
-def new_key(n):
-    return ''.join(random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(n))
 
 
 def allowed_file(filename):

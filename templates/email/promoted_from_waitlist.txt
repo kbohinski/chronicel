@@ -1,0 +1,6 @@
+{% include 'header.txt' %}
+
+You are off the waitlist!
+Room has opened up, and you are now welcome to come, we look forward to seeing you!
+
+{% include 'footer.txt' %}

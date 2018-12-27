@@ -1,0 +1,15 @@
+{% include 'header.txt' %}
+
+Thanks for visiting us at {{ hackathon_name }}!
+It looks like you may not have had a chance to finish applying.
+
+Most of the time this means you did not upload your resume.
+In case you were looking to pick up where you left off, here is the link to do so:
+{{ BASE_URL }}register
+
+We want to check in to see if there were any problems, or anything else we could help you with.
+If so please let us know by responding to this email.
+
+Best wishes, and we hope to see you at {{ hackathon_name }}!
+
+{% include 'footer.txt' %}

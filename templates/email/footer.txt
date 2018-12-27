@@ -1,0 +1,6 @@
+
+Please share with your friends and follow us on twitter for updates.
+
+Thanks Again!
+The {{ hackathon_name }} Team
+{{ twitter_link }}
